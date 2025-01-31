@@ -6,18 +6,18 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # Permite conexões do frontend (AwardSpace)
+CORS(app)
 
+# Configuração da API DeepSeek
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 
-# Função para converter imagem em texto (OCR)
-def extract_text_from_image(image):
-    return pytesseract.image_to_string(image).strip()
+@app.route("/")
+def home():
+    return jsonify({"message": "API do DeepSeek rodando!"})
 
-# Endpoint para análise de exames (texto ou imagem)
-@app.route("/analisar-exame", methods=["POST"])
-def analisar_exame():
+@app.route("/upload", methods=["POST"])
+def upload_file():
     if "file" not in request.files:
         return jsonify({"error": "Nenhum arquivo enviado."}), 400
 
@@ -27,51 +27,44 @@ def analisar_exame():
         return jsonify({"error": "Nenhum arquivo selecionado."}), 400
 
     try:
-        # Verifica se é uma imagem
-        if file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
+        # Verifica se o arquivo é uma imagem
+        if file.filename.endswith((".png", ".jpg", ".jpeg")):
             image = Image.open(file)
-            extracted_text = extract_text_from_image(image)
-            if not extracted_text:
+            extracted_text = pytesseract.image_to_string(image)  # Extrai texto da imagem
+            if not extracted_text.strip():
                 return jsonify({"error": "Nenhum texto encontrado na imagem."}), 400
         else:
             return jsonify({"error": "Apenas imagens são suportadas."}), 400
 
-        # Envia para DeepSeek para análise
-        response = requests.post(DEEPSEEK_URL, headers={
-            "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-            "Content-Type": "application/json"
-        }, json={
-            "model": "deepseek-chat",
-            "messages": [{"role": "user", "content": f"Analise este exame: {extracted_text}"}]
+        # Enviar para DeepSeek para análise
+        deepseek_response = deepseek_analyze(extracted_text)
+
+        return jsonify({
+            "laudo": deepseek_response,
+            "status": "Arquivo enviado com sucesso!"
         })
-
-        deepseek_response = response.json().get("choices", [{}])[0].get("message", {}).get("content", "Erro na resposta.")
-
-        return jsonify({"laudo": deepseek_response})
-
+    
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Endpoint do chatbot
-@app.route("/chat", methods=["POST"])
-def chat():
-    data = request.json
-    user_message = data.get("message", "")
-
-    if not user_message:
-        return jsonify({"error": "Nenhuma mensagem recebida."}), 400
-
-    response = requests.post(DEEPSEEK_URL, headers={
+def deepseek_analyze(texto):
+    headers = {
         "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
         "Content-Type": "application/json"
-    }, json={
+    }
+
+    payload = {
         "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": user_message}]
-    })
+        "messages": [{"role": "user", "content": f"Analise este exame e forneça um diagnóstico: {texto}"}]
+    }
 
-    deepseek_response = response.json().get("choices", [{}])[0].get("message", {}).get("content", "Erro na resposta.")
+    response = requests.post(DEEPSEEK_URL, headers=headers, json=payload)
 
-    return jsonify({"response": deepseek_response})
+    if response.status_code != 200:
+        return f"Erro ao processar laudo: {response.status_code}"
+
+    deepseek_result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "Erro na resposta")
+    return deepseek_result
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
