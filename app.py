@@ -4,10 +4,10 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # Permite conexões de outros domínios (frontend no AwardSpace)
+CORS(app)  # Permite conexões de outros domínios (como seu frontend no AwardSpace)
 
 # Configuração da API DeepSeek
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")  # Chave da API como variável de ambiente
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")  # Pegue a chave da API do Render
 DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 
 @app.route("/")
@@ -25,13 +25,13 @@ def upload_file():
         return jsonify({"error": "Nenhum arquivo selecionado."}), 400
 
     try:
-        # Simulação de processamento do exame
-        laudo = f"Arquivo '{file.filename}' processado com sucesso."
-        
-        # Enviar para DeepSeek
-        deepseek_response = deepseek_analyze(laudo)
+        # Enviar para DeepSeek para análise
+        deepseek_response = deepseek_analyze(file.filename)
 
-        return jsonify({"laudo": deepseek_response})
+        return jsonify({
+            "laudo": deepseek_response,  # Agora a resposta vem direto da DeepSeek
+            "status": "Arquivo enviado com sucesso!"
+        })
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -45,7 +45,7 @@ def deepseek_analyze(texto):
 
     payload = {
         "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": texto}]
+        "messages": [{"role": "user", "content": f"Analise este exame: {texto}"}]
     }
 
     response = requests.post(DEEPSEEK_URL, headers=headers, json=payload)
@@ -53,7 +53,8 @@ def deepseek_analyze(texto):
     if response.status_code != 200:
         return f"Erro ao processar laudo: {response.status_code}"
 
-    return response.json().get("choices", [{}])[0].get("message", {}).get("content", "Erro na resposta")
+    deepseek_result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "Erro na resposta")
+    return deepseek_result
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
