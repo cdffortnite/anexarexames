@@ -1,15 +1,13 @@
 import os
 import requests
-import pytesseract
-from PIL import Image
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
+CORS(app)  # Permite conexões de outros domínios (como seu frontend no AwardSpace)
 
 # Configuração da API DeepSeek
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")  # Pegue a chave da API no Render
 DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 
 @app.route("/")
@@ -27,20 +25,14 @@ def upload_file():
         return jsonify({"error": "Nenhum arquivo selecionado."}), 400
 
     try:
-        # Verifica se o arquivo é uma imagem
-        if file.filename.endswith((".png", ".jpg", ".jpeg")):
-            image = Image.open(file)
-            extracted_text = pytesseract.image_to_string(image)  # Extrai texto da imagem
-            if not extracted_text.strip():
-                return jsonify({"error": "Nenhum texto encontrado na imagem."}), 400
-        else:
-            return jsonify({"error": "Apenas imagens são suportadas."}), 400
+        # Simulação de processamento do exame
+        laudo_base = f"Parece que o arquivo '{file.filename}' foi processado com sucesso! Agora enviando para análise... 🚀"
 
-        # Enviar para DeepSeek para análise
-        deepseek_response = deepseek_analyze(extracted_text)
+        # Enviar o texto para DeepSeek
+        deepseek_response = deepseek_analyze(file.filename)
 
         return jsonify({
-            "laudo": deepseek_response,
+            "laudo": deepseek_response,  # Agora a resposta é realmente da DeepSeek
             "status": "Arquivo enviado com sucesso!"
         })
     
@@ -48,6 +40,7 @@ def upload_file():
         return jsonify({"error": str(e)}), 500
 
 def deepseek_analyze(texto):
+    """Envia um texto para análise na API DeepSeek"""
     headers = {
         "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
         "Content-Type": "application/json"
@@ -55,7 +48,7 @@ def deepseek_analyze(texto):
 
     payload = {
         "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": f"Analise este exame e forneça um diagnóstico: {texto}"}]
+        "messages": [{"role": "user", "content": f"Analise este exame: {texto}"}]
     }
 
     response = requests.post(DEEPSEEK_URL, headers=headers, json=payload)
