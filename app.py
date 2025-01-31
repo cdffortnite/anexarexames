@@ -25,11 +25,11 @@ def upload_file():
         return jsonify({"error": "Nenhum arquivo selecionado."}), 400
 
     try:
-        # Simulação de processamento do exame
-        laudo_base = f"Parece que o arquivo '{file.filename}' foi processado com sucesso! Agora enviando para análise... 🚀"
+        # Simulação de leitura do arquivo (caso seja texto)
+        file_content = file.read().decode("utf-8") if file.filename.endswith(".txt") else file.filename
 
         # Enviar o texto para DeepSeek
-        deepseek_response = deepseek_analyze(file.filename)
+        deepseek_response = deepseek_analyze(file_content)
 
         return jsonify({
             "laudo": deepseek_response,  # Agora a resposta é realmente da DeepSeek
@@ -58,6 +58,26 @@ def deepseek_analyze(texto):
 
     deepseek_result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "Erro na resposta")
     return deepseek_result
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    data = request.json
+    user_message = data.get("message", "").strip()
+
+    if not user_message:
+        return jsonify({"error": "Nenhuma mensagem recebida."}), 400
+
+    response = requests.post(DEEPSEEK_URL, headers={
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json"
+    }, json={
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": user_message}]
+    })
+
+    deepseek_response = response.json().get("choices", [{}])[0].get("message", {}).get("content", "Erro na resposta.")
+
+    return jsonify({"response": deepseek_response})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
