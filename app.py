@@ -16,8 +16,7 @@ user_conversations = {}
 # Contexto médico especializado para guiar a IA
 CONTEXT_MEDICO = (
     "Você é um assistente virtual especializado em assistência médica. "
-    "Responda com precisão, baseando-se em diretrizes científicas. "
-    "Se um diagnóstico ou tratamento for necessário, recomende sempre que o usuário consulte um médico. "
+    "Responda com precisão, baseando-se em diretrizes científicas e resuma em 150 tokens cada mensagem. "
     "Evite respostas vagas e forneça informações confiáveis sempre que possível."
 )
 
@@ -61,6 +60,7 @@ def chat():
     payload = {
         "model": "deepseek-chat",
         "temperature": 0.2,  # Reduz criatividade e melhora precisão médica
+          "max_tokens": 150,  # Limita o tamanho da resposta
         "messages": user_conversations[user_id]  # Mantém o histórico da conversa
     }
 
