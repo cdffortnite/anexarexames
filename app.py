@@ -2,9 +2,11 @@ import os
 import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_compress import Compress  # Importa a biblioteca de compressão
 
 app = Flask(__name__)
 CORS(app)  # Permite conexões de outros domínios (como seu frontend no AwardSpace)
+Compress(app)  # Ativa a compressão de respostas
 
 # Configuração da API DeepSeek
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")  # Pegue a chave da API no Render
@@ -60,7 +62,7 @@ def chat():
     payload = {
         "model": "deepseek-chat",
         "temperature": 0.2,  # Reduz criatividade e melhora precisão médica
-          "max_tokens": 150,  # Limita o tamanho da resposta
+        "max_tokens": 150,  # Limita o tamanho da resposta
         "messages": user_conversations[user_id]  # Mantém o histórico da conversa
     }
 
