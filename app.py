@@ -14,33 +14,15 @@ DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"
 def home():
     return jsonify({"message": "API do DeepSeek rodando!"})
 
-@app.route("/upload", methods=["POST"])
-def upload_file():
-    if "file" not in request.files:
-        return jsonify({"error": "Nenhum arquivo enviado."}), 400
+@app.route("/chat", methods=["POST"])
+def chat():
+    """Recebe uma mensagem do usuário e retorna a resposta da API DeepSeek."""
+    data = request.json
+    user_message = data.get("message", "").strip()
 
-    file = request.files["file"]
+    if not user_message:
+        return jsonify({"error": "Nenhuma mensagem recebida."}), 400
 
-    if file.filename == "":
-        return jsonify({"error": "Nenhum arquivo selecionado."}), 400
-
-    try:
-        # Simulação de leitura do arquivo (caso seja texto)
-        file_content = file.read().decode("utf-8") if file.filename.endswith(".txt") else file.filename
-
-        # Enviar o texto para DeepSeek
-        deepseek_response = deepseek_analyze(file_content)
-
-        return jsonify({
-            "laudo": deepseek_response,  # Agora a resposta é realmente da DeepSeek
-            "status": "Arquivo enviado com sucesso!"
-        })
-    
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-def deepseek_analyze(texto):
-    """Envia um texto para análise na API DeepSeek"""
     headers = {
         "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
         "Content-Type": "application/json"
@@ -48,32 +30,13 @@ def deepseek_analyze(texto):
 
     payload = {
         "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": f"Analise este exame: {texto}"}]
+        "messages": [{"role": "user", "content": user_message}]
     }
 
     response = requests.post(DEEPSEEK_URL, headers=headers, json=payload)
 
     if response.status_code != 200:
-        return f"Erro ao processar laudo: {response.status_code}"
-
-    deepseek_result = response.json().get("choices", [{}])[0].get("message", {}).get("content", "Erro na resposta")
-    return deepseek_result
-
-@app.route("/chat", methods=["POST"])
-def chat():
-    data = request.json
-    user_message = data.get("message", "").strip()
-
-    if not user_message:
-        return jsonify({"error": "Nenhuma mensagem recebida."}), 400
-
-    response = requests.post(DEEPSEEK_URL, headers={
-        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-        "Content-Type": "application/json"
-    }, json={
-        "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": user_message}]
-    })
+        return jsonify({"error": f"Erro na API DeepSeek: {response.status_code}"}), response.status_code
 
     deepseek_response = response.json().get("choices", [{}])[0].get("message", {}).get("content", "Erro na resposta.")
 
