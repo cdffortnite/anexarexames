@@ -5,6 +5,3 @@ pytesseract
 pillow
 gunicorn
 flask-compress
-httpx
-hypercorn
-
