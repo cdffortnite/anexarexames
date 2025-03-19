@@ -86,4 +86,6 @@ def chat():
     return jsonify({"response": deepseek_response})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))  # Usa a variável de ambiente PORT ou 5000 como valor padrão
+    app.run(host="0.0.0.0", port=port)  # Usa a variável port ao invés do valor fixo 5000
+
